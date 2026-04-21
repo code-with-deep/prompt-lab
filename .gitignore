@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Database — never commit SQLite files or Flask instance folders
+*.db
+*.sqlite3
+instance/
+backend/instance/
+
+# Node (if any)
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
