@@ -9,16 +9,19 @@ services:
       - key: FLASK_ENV
         value: production
       - key: GROQ_API_KEY
-        sync: false         
+        sync: false
       - key: SECRET_KEY
-        generateValue: true 
+        generateValue: true
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://prompt-playground-frontend.onrender.com
     autoDeploy: true
 
   - type: web
     name: prompt-playground-frontend
     runtime: static
     staticPublishPath: frontend
-    buildCommand: ""         
+    buildCommand: |
+      echo "window.API_BASE = 'https://prompt-playground-backend.onrender.com/api';" > frontend/js/config.js
     routes:
       - type: rewrite
         source: /*

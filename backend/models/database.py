@@ -1,7 +1,33 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
+
 db = SQLAlchemy()
+
+class User(db.Model):
+    """
+    Stores registered users for authentication.
+    USE CASE: auth routes (signup, login, /me) depend on this model.
+    """
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(200), nullable=False, unique=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'email': self.email,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+
+
 class PromptTemplate(db.Model):
     """
     Stores both built-in templates (is_builtin=True) and user-saved prompts.
@@ -9,25 +35,26 @@ class PromptTemplate(db.Model):
     When a user clicks a template, the frontend fetches it by ID.
     """
     __tablename__ = 'prompt_templates'
+
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, default='')
-    category = db.Column(db.String(100), default='General')  # e.g., "Content Writing", "Code"
-    technique = db.Column(db.String(100), default='zero-shot')  # Prompt technique used
+    category = db.Column(db.String(100), default='General')
+    technique = db.Column(db.String(100), default='zero-shot')
     system_prompt = db.Column(db.Text, default='')
     user_prompt = db.Column(db.Text, nullable=False)
-    variables = db.Column(db.Text, default='[]')   # JSON array: ["product_name", "tone"]
-    tags = db.Column(db.Text, default='[]')         # JSON array: ["marketing", "email"]
+    variables = db.Column(db.Text, default='[]')
+    tags = db.Column(db.Text, default='[]')
     recommended_temperature = db.Column(db.Float, default=0.7)
     recommended_max_tokens = db.Column(db.Integer, default=1024)
     recommended_top_p = db.Column(db.Float, default=0.9)
-    is_builtin = db.Column(db.Boolean, default=False)  # True = pre-loaded, False = user-created
+    is_builtin = db.Column(db.Boolean, default=False)
     version = db.Column(db.Integer, default=1)
     parent_id = db.Column(db.Integer, db.ForeignKey('prompt_templates.id'), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     def to_dict(self):
-        """Convert model to dictionary for JSON API responses."""
         return {
             'id': self.id,
             'name': self.name,
@@ -47,6 +74,8 @@ class PromptTemplate(db.Model):
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }
+
+
 class ExecutionHistory(db.Model):
     """
     Records every LLM call made through the playground.
@@ -55,6 +84,7 @@ class ExecutionHistory(db.Model):
     Also useful for debugging and cost tracking.
     """
     __tablename__ = 'execution_history'
+
     id = db.Column(db.Integer, primary_key=True)
     system_prompt = db.Column(db.Text, default='')
     user_prompt = db.Column(db.Text, nullable=False)
@@ -71,10 +101,11 @@ class ExecutionHistory(db.Model):
     template_id = db.Column(db.Integer, nullable=True)
     input_tokens = db.Column(db.Integer, default=0)
     output_tokens = db.Column(db.Integer, default=0)
-    latency_ms = db.Column(db.Integer, default=0)  # Response time in milliseconds
-    estimated_cost = db.Column(db.Float, default=0.0)  # Cost in USD
-    rating = db.Column(db.Integer, nullable=True)  # 1-5 stars
+    latency_ms = db.Column(db.Integer, default=0)
+    estimated_cost = db.Column(db.Float, default=0.0)
+    rating = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
     def to_dict(self):
         return {
             'id': self.id,

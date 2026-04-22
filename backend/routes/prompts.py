@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from models.database import db, PromptTemplate
 import json
+
 prompts_bp = Blueprint('prompts', __name__)
+
 @prompts_bp.route('/prompts', methods=['GET'])
 def list_prompts():
     """
@@ -11,11 +13,13 @@ def list_prompts():
     search = request.args.get('search', '').lower()
     category = request.args.get('category', '')
     include_builtin = request.args.get('include_builtin', 'true').lower() == 'true'
+
     query = PromptTemplate.query
     if not include_builtin:
         query = query.filter_by(is_builtin=False)
     if category:
         query = query.filter_by(category=category)
+
     prompts = query.order_by(PromptTemplate.updated_at.desc()).all()
     if search:
         prompts = [
@@ -28,12 +32,15 @@ def list_prompts():
         'prompts': [p.to_dict() for p in prompts],
         'total': len(prompts)
     }), 200
+
+
 @prompts_bp.route('/prompts', methods=['POST'])
 def save_prompt():
     """Save a new prompt to the library."""
     data = request.get_json()
     if not data.get('name') or not data.get('user_prompt'):
         return jsonify({'error': 'name and user_prompt are required'}), 400
+
     prompt = PromptTemplate(
         name=data['name'],
         description=data.get('description', ''),
@@ -50,11 +57,15 @@ def save_prompt():
     db.session.add(prompt)
     db.session.commit()
     return jsonify(prompt.to_dict()), 201
+
+
 @prompts_bp.route('/prompts/<int:prompt_id>', methods=['GET'])
 def get_prompt(prompt_id):
     """Get a specific prompt by ID."""
     prompt = PromptTemplate.query.get_or_404(prompt_id)
     return jsonify(prompt.to_dict()), 200
+
+
 @prompts_bp.route('/prompts/<int:prompt_id>', methods=['PUT'])
 def update_prompt(prompt_id):
     """
@@ -64,6 +75,11 @@ def update_prompt(prompt_id):
     """
     old_prompt = PromptTemplate.query.get_or_404(prompt_id)
     data = request.get_json()
+
+    # Fall back to existing serialized values if fields are omitted
+    variables = json.dumps(data['variables']) if 'variables' in data else old_prompt.variables
+    tags = json.dumps(data['tags']) if 'tags' in data else old_prompt.tags
+
     new_prompt = PromptTemplate(
         name=data.get('name', old_prompt.name),
         description=data.get('description', old_prompt.description),
@@ -71,8 +87,8 @@ def update_prompt(prompt_id):
         technique=data.get('technique', old_prompt.technique),
         system_prompt=data.get('system_prompt', old_prompt.system_prompt),
         user_prompt=data.get('user_prompt', old_prompt.user_prompt),
-        variables=json.dumps(data.get('variables', [])),
-        tags=json.dumps(data.get('tags', [])),
+        variables=variables,
+        tags=tags,
         recommended_temperature=data.get('temperature', old_prompt.recommended_temperature),
         recommended_max_tokens=data.get('max_tokens', old_prompt.recommended_max_tokens),
         is_builtin=False,
@@ -82,6 +98,8 @@ def update_prompt(prompt_id):
     db.session.add(new_prompt)
     db.session.commit()
     return jsonify(new_prompt.to_dict()), 200
+
+
 @prompts_bp.route('/prompts/<int:prompt_id>', methods=['DELETE'])
 def delete_prompt(prompt_id):
     """Delete a saved prompt (cannot delete built-in templates)."""
@@ -91,6 +109,8 @@ def delete_prompt(prompt_id):
     db.session.delete(prompt)
     db.session.commit()
     return jsonify({'message': 'Prompt deleted successfully'}), 200
+
+
 @prompts_bp.route('/export', methods=['GET'])
 def export_prompts():
     """Export all user prompts as a JSON file."""
@@ -101,6 +121,8 @@ def export_prompts():
     response.headers['Content-Type'] = 'application/json'
     response.headers['Content-Disposition'] = 'attachment; filename=my_prompts.json'
     return response
+
+
 @prompts_bp.route('/import', methods=['POST'])
 def import_prompts():
     """Import prompts from a JSON file upload."""
@@ -112,6 +134,7 @@ def import_prompts():
     else:
         file = request.files['file']
         prompts_data = json.loads(file.read())
+
     imported = 0
     for p_data in prompts_data:
         prompt = PromptTemplate(
@@ -127,5 +150,6 @@ def import_prompts():
         )
         db.session.add(prompt)
         imported += 1
+
     db.session.commit()
     return jsonify({'message': f'Imported {imported} prompts'}), 200

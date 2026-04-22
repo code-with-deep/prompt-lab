@@ -6,6 +6,7 @@ from routes.generate import generate_bp
 from routes.templates import templates_bp
 from routes.prompts import prompts_bp
 from routes.history import history_bp
+from routes.auth import auth_bp
 import os
 
 
@@ -32,10 +33,11 @@ def create_app():
     app.register_blueprint(templates_bp, url_prefix='/api')
     app.register_blueprint(prompts_bp, url_prefix='/api')
     app.register_blueprint(history_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp, url_prefix='/api')
 
     with app.app_context():
         db.create_all()
-        _seed_templates()  # Always seed — count check inside prevents duplicates
+        _seed_templates()  # Always seed — per-template check inside prevents duplicates
 
     # Health check route
     @app.route('/api/health')
@@ -54,9 +56,6 @@ def _seed_templates():
     import json
     from models.database import PromptTemplate
 
-    if PromptTemplate.query.filter_by(is_builtin=True).count() > 0:
-        return
-
     template_file = os.path.join(os.path.dirname(__file__), 'data', 'templates.json')
 
     if not os.path.exists(template_file):
@@ -66,7 +65,11 @@ def _seed_templates():
     with open(template_file, 'r') as f:
         templates = json.load(f)
 
+    inserted = 0
     for t in templates:
+        
+        if PromptTemplate.query.filter_by(name=t['name'], is_builtin=True).first():
+            continue
         template = PromptTemplate(
             name=t['name'],
             description=t['description'],
@@ -81,9 +84,13 @@ def _seed_templates():
             is_builtin=True
         )
         db.session.add(template)
+        inserted += 1
 
-    db.session.commit()
-    print(f"✅ Seeded {len(templates)} built-in templates")
+    if inserted:
+        db.session.commit()
+        print(f"✅ Seeded {inserted} built-in templates")
+    else:
+        print("✅ Built-in templates already up to date")
 
 
 # ✅ Required for Gunicorn
