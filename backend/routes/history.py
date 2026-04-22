@@ -1,0 +1,66 @@
+from flask import Blueprint, request, jsonify, g
+from models.database import db, ExecutionHistory
+from services.auth_service import token_required
+
+history_bp = Blueprint('history', __name__)
+
+@history_bp.route('/history', methods=['GET'])
+@token_required
+def get_history():
+    """
+    Return paginated execution history for the current user.
+    Query params: ?page=1&limit=20&technique=chain-of-thought&min_rating=4
+    """
+    page = max(1, int(request.args.get('page', 1)))
+    limit = max(1, min(100, int(request.args.get('limit', 20))))
+    technique = request.args.get('technique', '')
+    min_rating = request.args.get('min_rating', None)
+
+    query = ExecutionHistory.query.filter_by(user_id=g.user_id)
+    if technique:
+        query = query.filter_by(technique=technique)
+    if min_rating:
+        query = query.filter(ExecutionHistory.rating >= int(min_rating))
+
+    total = query.count()
+    entries = query.order_by(ExecutionHistory.created_at.desc())\
+                   .offset((page - 1) * limit)\
+                   .limit(limit).all()
+
+    return jsonify({
+        'history': [e.to_dict() for e in entries],
+        'total': total,
+        'page': page,
+        'pages': (total + limit - 1) // limit
+    }), 200
+
+
+@history_bp.route('/history/<int:history_id>/rate', methods=['POST'])
+@token_required
+def rate_execution(history_id):
+    """
+    Save user rating for an execution.
+    USE CASE: After seeing the output, user gives 1-5 stars.
+    This helps track which prompts/parameters work best.
+    """
+    entry = ExecutionHistory.query.filter_by(id=history_id, user_id=g.user_id).first_or_404()
+    data = request.get_json()
+    rating = data.get('rating')
+
+    if not rating or not (1 <= int(rating) <= 5):
+        return jsonify({'error': 'Rating must be 1-5'}), 400
+
+    entry.rating = int(rating)
+    db.session.commit()
+    return jsonify({'message': 'Rating saved'}), 200
+
+
+@history_bp.route('/history/<int:history_id>', methods=['GET'])
+def get_history_entry(history_id):
+    """
+    Get a single history entry by ID.
+    USE CASE: Re-run from history — fetch the exact entry to load
+    its prompts back into the playground without re-fetching the entire list.
+    """
+    entry = ExecutionHistory.query.get_or_404(history_id)
+    return jsonify(entry.to_dict()), 200
