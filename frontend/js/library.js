@@ -49,6 +49,12 @@ function createPromptCard(prompt) {
 async function loadPromptIntoPlayground(promptId) {
     try {
         const prompt = await apiFetch(`/prompts/${promptId}`);
+        
+        // Reset the output/metrics state before loading new prompt
+        if (typeof clearOutputState === 'function') {
+            clearOutputState();
+        }
+
         document.querySelector('[data-screen="playground"]').click();
         document.getElementById('systemPrompt').value = prompt.system_prompt || '';
         document.getElementById('userPrompt').value = prompt.user_prompt || '';

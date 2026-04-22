@@ -33,11 +33,13 @@ class PromptTemplate(db.Model):
     Stores both built-in templates (is_builtin=True) and user-saved prompts.
     USE CASE: The Prompt Library screen reads from this table.
     When a user clicks a template, the frontend fetches it by ID.
+    user_id is null for built-in templates and set for user-owned prompts.
     """
     __tablename__ = 'prompt_templates'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)  # null = built-in
+    name = db.Column(db.String(200), nullable=False, unique=True)
     description = db.Column(db.Text, default='')
     category = db.Column(db.String(100), default='General')
     technique = db.Column(db.String(100), default='zero-shot')
@@ -57,6 +59,7 @@ class PromptTemplate(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'user_id': self.user_id,
             'name': self.name,
             'description': self.description,
             'category': self.category,
@@ -86,6 +89,7 @@ class ExecutionHistory(db.Model):
     __tablename__ = 'execution_history'
 
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     system_prompt = db.Column(db.Text, default='')
     user_prompt = db.Column(db.Text, nullable=False)
     output = db.Column(db.Text, default='')
@@ -109,6 +113,7 @@ class ExecutionHistory(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            'user_id': self.user_id,
             'system_prompt': self.system_prompt,
             'user_prompt': self.user_prompt[:200] + '...' if len(self.user_prompt) > 200 else self.user_prompt,
             'user_prompt_full': self.user_prompt,

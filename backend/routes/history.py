@@ -1,12 +1,14 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from models.database import db, ExecutionHistory
+from services.auth_service import token_required
 
 history_bp = Blueprint('history', __name__)
 
 @history_bp.route('/history', methods=['GET'])
+@token_required
 def get_history():
     """
-    Return paginated execution history.
+    Return paginated execution history for the current user.
     Query params: ?page=1&limit=20&technique=chain-of-thought&min_rating=4
     """
     page = max(1, int(request.args.get('page', 1)))
@@ -14,7 +16,7 @@ def get_history():
     technique = request.args.get('technique', '')
     min_rating = request.args.get('min_rating', None)
 
-    query = ExecutionHistory.query
+    query = ExecutionHistory.query.filter_by(user_id=g.user_id)
     if technique:
         query = query.filter_by(technique=technique)
     if min_rating:
@@ -34,13 +36,14 @@ def get_history():
 
 
 @history_bp.route('/history/<int:history_id>/rate', methods=['POST'])
+@token_required
 def rate_execution(history_id):
     """
     Save user rating for an execution.
     USE CASE: After seeing the output, user gives 1-5 stars.
     This helps track which prompts/parameters work best.
     """
-    entry = ExecutionHistory.query.get_or_404(history_id)
+    entry = ExecutionHistory.query.filter_by(id=history_id, user_id=g.user_id).first_or_404()
     data = request.get_json()
     rating = data.get('rating')
 

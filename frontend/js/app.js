@@ -1,4 +1,12 @@
 let currentHistoryId = null;  
+const OUTPUT_PLACEHOLDER_HTML = `
+    <div class="output-placeholder">
+        <i class="fas fa-magic"></i>
+        <p>Your AI output will appear here</p>
+        <p class="hint">Write a prompt and click Run</p>
+    </div>
+`;
+
 function initNavigation() {
     document.querySelectorAll('.nav-item').forEach(link => {
         link.addEventListener('click', (e) => {
@@ -24,10 +32,9 @@ async function runPrompt() {
     const outputContent = document.getElementById('outputContent');
     const loadingState = document.getElementById('loadingState');
     const runBtn = document.getElementById('runBtn');
+    clearOutputState();
     loadingState.style.display = 'flex';
     outputContent.style.display = 'none';
-    document.getElementById('ratingPanel').style.display = 'none';
-    document.getElementById('metricsBar').style.display = 'none';
     runBtn.disabled = true;
     runBtn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;"></div> Running...';
     try {
@@ -138,20 +145,45 @@ function initShortcuts() {
 function initCopyOutput() {
     document.getElementById('copyOutputBtn').addEventListener('click', () => {
         const container = document.getElementById('outputContent');
-        const content = container.dataset.raw ? decodeURIComponent(container.dataset.raw) : container.innerText;
+        if (!container.dataset.raw) {
+            showToast('No output to copy yet', 'info');
+            return;
+        }
+
+        const content = decodeURIComponent(container.dataset.raw);
         navigator.clipboard.writeText(content);
         showToast('Output copied to clipboard', 'success');
     });
     document.getElementById('clearOutputBtn').addEventListener('click', () => {
-        document.getElementById('outputContent').innerHTML = `
-            <div class="output-placeholder">
-                <i class="fas fa-magic"></i>
-                <p>Your AI output will appear here</p>
-            </div>
-        `;
-        document.getElementById('metricsBar').style.display = 'none';
-        document.getElementById('ratingPanel').style.display = 'none';
+        clearOutputState();
     });
+}
+function clearOutputState() {
+    const outputContent = document.getElementById('outputContent');
+    const loadingState = document.getElementById('loadingState');
+    const ratingPanel = document.getElementById('ratingPanel');
+    const metricsBar = document.getElementById('metricsBar');
+
+    if (outputContent) outputContent.style.display = 'block';
+    if (loadingState) loadingState.style.display = 'none';
+    if (ratingPanel) ratingPanel.style.display = 'none';
+    if (metricsBar) metricsBar.style.display = 'none';
+
+    if (outputContent) {
+        outputContent.innerHTML = OUTPUT_PLACEHOLDER_HTML;
+        delete outputContent.dataset.raw;
+    }
+    const latencyDisplay = document.getElementById('latencyDisplay');
+    const tokensDisplay = document.getElementById('tokensDisplay');
+    const costDisplay = document.getElementById('costDisplay');
+    if (latencyDisplay) latencyDisplay.textContent = '--';
+    if (tokensDisplay) tokensDisplay.textContent = '--';
+    if (costDisplay) costDisplay.textContent = '--';
+    
+    const stars = document.querySelectorAll('.star-rating i');
+    stars.forEach(s => s.classList.remove('active'));
+
+    currentHistoryId = null;
 }
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');

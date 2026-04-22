@@ -5,8 +5,14 @@ load_dotenv()
 
 class Config:
     # Flask settings
-    SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_ENV') == 'development'
+    
+    SECRET_KEY = os.getenv('SECRET_KEY')
+    if not DEBUG and not SECRET_KEY:
+        raise ValueError("SECRET_KEY is not set in production environment.")
+    if DEBUG and not SECRET_KEY:
+        SECRET_KEY = 'dev-secret-key-for-development-only'
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Database: Read from env for production (e.g. PostgreSQL on Render),

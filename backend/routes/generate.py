@@ -1,16 +1,18 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from services.llm_service import call_llm
 from services.output_parser import parse_output
 from services.token_counter import count_tokens
 from models.database import db, ExecutionHistory
+from services.auth_service import token_required
 import json
 from datetime import datetime
 
 generate_bp = Blueprint('generate', __name__)
 
-def _save_to_history(prompt_data: dict, result: dict):
+def _save_to_history(prompt_data: dict, result: dict, user_id: int):
     """Helper: Save execution to database for history tracking."""
     history = ExecutionHistory(
+        user_id=user_id,
         system_prompt=prompt_data.get('system_prompt', ''),
         user_prompt=prompt_data.get('user_prompt', ''),
         output=result.get('output', ''),
@@ -33,6 +35,7 @@ def _save_to_history(prompt_data: dict, result: dict):
 
 
 @generate_bp.route('/generate', methods=['POST'])
+@token_required
 def generate():
     """
     Main generation endpoint.
@@ -58,7 +61,7 @@ def generate():
         )
         parsed = parse_output(result['output'])
         result['parsed_output'] = parsed
-        history_id = _save_to_history(data, result)
+        history_id = _save_to_history(data, result, g.user_id)
         result['history_id'] = history_id
         return jsonify(result), 200
 
@@ -73,6 +76,7 @@ def generate():
 
 
 @generate_bp.route('/compare', methods=['POST'])
+@token_required
 def compare():
     """
     Run two prompts simultaneously and return both results.
@@ -93,7 +97,7 @@ def compare():
             params=prompt_a
         )
         result_a['parsed_output'] = parse_output(result_a['output'])
-        _save_to_history(prompt_a, result_a)
+        _save_to_history(prompt_a, result_a, g.user_id)
 
         result_b = call_llm(
             system_prompt=prompt_b.get('system_prompt', ''),
@@ -101,7 +105,7 @@ def compare():
             params=prompt_b
         )
         result_b['parsed_output'] = parse_output(result_b['output'])
-        _save_to_history(prompt_b, result_b)
+        _save_to_history(prompt_b, result_b, g.user_id)
 
         return jsonify({
             'result_a': result_a,
@@ -113,6 +117,7 @@ def compare():
 
 
 @generate_bp.route('/sweep', methods=['POST'])
+@token_required
 def sweep():
     """
     Run the same prompt with different values of a parameter.
@@ -125,6 +130,9 @@ def sweep():
         base_prompt = data.get('prompt', {})
         sweep_param = data.get('sweep_param', 'temperature')
         sweep_values = data.get('sweep_values', [0.0, 0.3, 0.7, 1.0, 1.5])
+
+        if len(sweep_values) > 10:
+            return jsonify({'error': 'Too many sweep values. Maximum is 10.'}), 400
 
         if not base_prompt.get('user_prompt'):
             return jsonify({'error': 'prompt.user_prompt is required'}), 400
@@ -140,7 +148,7 @@ def sweep():
             result['sweep_value'] = value
             result['sweep_param'] = sweep_param
             result['parsed_output'] = parse_output(result['output'])
-            _save_to_history(params, result)
+            _save_to_history(params, result, g.user_id)
             results.append(result)
 
         return jsonify({'results': results, 'sweep_param': sweep_param}), 200
