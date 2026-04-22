@@ -28,11 +28,11 @@ function initSweep() {
             return isNaN(num) ? v : num;
         });
 
-        // Prepare payload
+        
         const payload = {
             prompt: {
                 user_prompt: promptText,
-                system_prompt: "You are a helpful assistant.", // Default or could be retrieved from playground
+                system_prompt: "You are a helpful assistant.",
                 provider: 'groq',
                 model: 'llama-3.1-8b-instant'
             },
@@ -40,7 +40,7 @@ function initSweep() {
             sweep_values: sweepValues
         };
 
-        // UI State: Loading
+        
         sweepGrid.innerHTML = '';
         runSweepBtn.disabled = true;
         runSweepBtn.innerHTML = '<div class="loading-spinner" style="width:16px;height:16px;"></div> Running Sweep...';
@@ -56,8 +56,8 @@ function initSweep() {
                 const header = document.createElement('div');
                 header.className = 'sweep-card-header';
                 header.innerHTML = `
-                    <span class="sweep-badge">${sweepParam}: ${result.sweep_value}</span>
-                    <span class="sweep-latency">${result.latency_ms}ms</span>
+                    <span class="sweep-param-badge">${sweepParam}: ${result.sweep_value}</span>
+                    <span>${result.latency_ms}ms</span>
                 `;
                 
                 const content = document.createElement('div');
@@ -86,5 +86,5 @@ function initSweep() {
     });
 }
 
-// Initialize when DOM is ready
+
 document.addEventListener('DOMContentLoaded', initSweep);

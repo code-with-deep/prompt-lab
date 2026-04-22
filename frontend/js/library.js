@@ -17,6 +17,7 @@ async function loadLibrary() {
         grid.innerHTML = `<div style="color: var(--accent-red); padding: 20px;">Failed to load library: ${error.message}</div>`;
     }
 }
+
 function createPromptCard(prompt) {
     const card = document.createElement('div');
     card.className = 'prompt-card';
@@ -44,6 +45,7 @@ function createPromptCard(prompt) {
     `;
     return card;
 }
+
 async function loadPromptIntoPlayground(promptId) {
     try {
         const prompt = await apiFetch(`/prompts/${promptId}`);
@@ -72,6 +74,7 @@ async function loadPromptIntoPlayground(promptId) {
         }
     }
 }
+
 async function handleDeletePrompt(id, btn) {
     if (!confirm('Delete this prompt?')) return;
     try {
@@ -82,11 +85,13 @@ async function handleDeletePrompt(id, btn) {
         if (typeof showToast !== 'undefined') showToast('Delete failed: ' + error.message, 'error');
     }
 }
+
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     let searchTimer;
     const searchInput = document.getElementById('librarySearch');
@@ -122,52 +127,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    // NOTE: runSweepBtn is handled exclusively by sweep.js — no duplicate listener here
+    
 });
-async function runParameterSweep() {
-    const promptText = document.getElementById('sweepPrompt')?.value?.trim();
-    const sweepParam = document.getElementById('sweepParam')?.value;
-    const valuesText = document.getElementById('sweepValues')?.value;
-    if (!promptText) {
-        if (typeof showToast !== 'undefined') showToast('Enter a prompt first', 'error');
-        return;
-    }
-    const sweepValues = valuesText.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
-    const grid = document.getElementById('sweepGrid');
-    grid.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><p>Running sweep...</p></div>';
-    document.getElementById('runSweepBtn').disabled = true;
-    try {
-        const result = await sweepParams({
-            prompt: {
-                user_prompt: promptText,
-                provider: document.getElementById('providerSelector').value
-            },
-            sweep_param: sweepParam,
-            sweep_values: sweepValues
-        });
-        grid.innerHTML = '';
-        result.results.forEach(r => {
-            const card = document.createElement('div');
-            card.className = 'sweep-card';
-            card.innerHTML = `
-                <div class="sweep-card-header">
-                    <span>${sweepParam}</span>
-                    <span class="sweep-param-badge">${r.sweep_value}</span>
-                </div>
-                <div class="sweep-output">${escapeHtml(r.output?.substring(0, 300) + (r.output?.length > 300 ? '...' : ''))}</div>
-                <div class="compare-metrics" style="margin-top:8px;">
-                    <span>⏱ ${r.latency_ms}ms</span>
-                    <span>🔢 ${(r.input_tokens || 0) + (r.output_tokens || 0)} tokens</span>
-                </div>
-            `;
-            grid.appendChild(card);
-        });
-    } catch (error) {
-        grid.innerHTML = `<div style="color: var(--accent-red); padding: 20px;">Sweep failed: ${error.message}</div>`;
-    } finally {
-        document.getElementById('runSweepBtn').disabled = false;
-    }
-}
+
 async function loadHistory() {
     const list = document.getElementById('historyList');
     list.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div></div>';
@@ -207,6 +169,7 @@ async function loadHistory() {
         list.innerHTML = `<div style="color: var(--accent-red); padding: 20px;">Failed to load history: ${error.message}</div>`;
     }
 }
+
 async function reRunFromHistory(historyId) {
     try {
         // Fetch the specific entry by ID — avoids missing entries beyond page 1

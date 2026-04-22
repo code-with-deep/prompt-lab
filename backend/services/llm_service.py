@@ -1,24 +1,24 @@
-
 import time
-import os
 from config import Config
 
 
 def call_llm(system_prompt: str, user_prompt: str, params: dict) -> dict:
     """
-    Master function that routes to the right LLM provider.
-    
+    Call the configured LLM backend.
+
+    Currently, only the Groq backend is supported.
+
     Args:
         system_prompt: Instructions for the AI's persona/behavior
         user_prompt: The actual user question/task
         params: Dict with temperature, max_tokens, top_p, etc.
-    
+            Any `provider` value is currently ignored because only Groq
+            is implemented.
+
     Returns:
         Dict with output text and metrics
     """
-    provider = params.get('provider', 'groq').lower()
     
-    # Only Groq is available (no Gemini)
     return _call_groq(system_prompt, user_prompt, params)
 
 
@@ -59,7 +59,7 @@ def _call_groq(system_prompt: str, user_prompt: str, params: dict) -> dict:
     input_tokens = response.usage.prompt_tokens
     output_tokens = response.usage.completion_tokens
     
-    # Groq Llama3 pricing: ~$0.05 per 1M tokens (approx)
+    
     estimated_cost = (input_tokens + output_tokens) * 0.00000005
     
     return {

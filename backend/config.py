@@ -4,15 +4,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class Config:
-    # Flask settings
+    
     SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
     DEBUG = os.getenv('FLASK_ENV') == 'development'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # Database: Use SQLite (compatible with Python 3.14)
+    # Database: Use SQLite
     SQLALCHEMY_DATABASE_URI = 'sqlite:///playground.db'
     
-    # LLM API Key (Groq only)
+    
     GROQ_API_KEY = os.getenv('GROQ_API_KEY', '')
     
     # Default LLM parameters

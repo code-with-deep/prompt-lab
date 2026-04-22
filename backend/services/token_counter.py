@@ -1,9 +1,10 @@
 def count_tokens(text: str, model: str = 'gpt-3.5-turbo') -> int:
     """
-    Count tokens in text using tiktoken.
-    WHY TIKTOKEN: Even for Gemini/Groq, tiktoken gives a close-enough estimate.
-    Token counts aren't exact across providers but are within ~10%.
-    Returns approximate token count.
+    Return an approximate token count for text.
+    Uses tiktoken when available because it gives a close-enough estimate
+    even for non-OpenAI providers such as Gemini/Groq.
+    If tiktoken is unavailable or errors, falls back to the rough heuristic
+    `len(text) // 4`.
     """
     try:
         import tiktoken

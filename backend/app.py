@@ -13,8 +13,16 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    
-    CORS(app, resources={r"/api/*": {"origins": "*"}})
+    allowed_origins = [
+        origin.strip()
+        for origin in os.getenv(
+            'CORS_ALLOWED_ORIGINS',
+            'http://localhost:3000,http://127.0.0.1:3000'
+        ).split(',')
+        if origin.strip()
+    ]
+
+    CORS(app, resources={r"/api/*": {"origins": allowed_origins}})
 
     # Initialize DB
     db.init_app(app)
@@ -25,7 +33,6 @@ def create_app():
     app.register_blueprint(prompts_bp, url_prefix='/api')
     app.register_blueprint(history_bp, url_prefix='/api')
 
-    
     with app.app_context():
         db.create_all()
         _seed_templates()  # Always seed — count check inside prevents duplicates
@@ -47,12 +54,11 @@ def _seed_templates():
     import json
     from models.database import PromptTemplate
 
-    if PromptTemplate.query.count() > 0:
+    if PromptTemplate.query.filter_by(is_builtin=True).count() > 0:
         return
 
     template_file = os.path.join(os.path.dirname(__file__), 'data', 'templates.json')
 
-    
     if not os.path.exists(template_file):
         print("⚠️ templates.json not found, skipping seeding")
         return

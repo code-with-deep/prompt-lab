@@ -12,7 +12,8 @@ function renderOutput(container, result) {
     } else {
         const div = document.createElement('div');
         div.className = 'output-text';
-        div.innerHTML = marked.parse(rawText);
+        const rawHtml = marked.parse(rawText, { mangle: false, headerIds: false });
+        div.innerHTML = DOMPurify.sanitize(rawHtml);
         div.querySelectorAll('pre code').forEach(block => {
             const pre = block.parentElement;
             pre.style.position = 'relative';
@@ -30,6 +31,7 @@ function renderOutput(container, result) {
         container.appendChild(div);
     }
 }
+
 function renderMetrics(result) {
     document.getElementById('latencyDisplay').textContent = result.latency_ms || 0;
     document.getElementById('tokensDisplay').textContent =
